@@ -2,6 +2,36 @@
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#171c2c"><title>Mi Día</title>
 <style>
 :root{font-family:system-ui,-apple-system,sans-serif;color:#eef0f7;background:#171c2c}*{box-sizing:border-box}body{margin:0}main{max-width:650px;margin:auto;padding:22px 16px 80px}h1{font-size:28px;margin:0}small,.muted{color:#a5aec5}nav{display:flex;gap:7px;margin:22px 0}button,input,select{font:inherit}button{cursor:pointer;border:0;border-radius:12px;padding:11px 14px;background:#333c55;color:#fff}button.active,.primary{background:#8978db;color:white}nav button{flex:1}section{background:#222a3e;border:1px solid #35405c;border-radius:17px;padding:17px;margin:12px 0}.row{display:flex;align-items:center;gap:10px;justify-content:space-between}.row>div{flex:1}input,select{width:100%;background:#171e30;border:1px solid #4a5570;color:white;padding:12px;border-radius:10px}label{display:block;margin:10px 0 5px;font-size:13px;color:#bbc3d7}.task{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #39415a}.task input{width:20px}.task span{flex:1}.task.done span{text-decoration:line-through;opacity:.5}.tag{font-size:12px;color:#aab6d1}.full{width:100%;margin-top:12px}.hidden{display:none}.slot{padding:12px 0;border-bottom:1px solid #3c465e}.slot strong{display:block}.warning{color:#ffd19a}.pill{display:inline-block;background:#35405b;padding:4px 8px;border-radius:8px;font-size:12px}footer{margin-top:22px;text-align:center;color:#8995af;font-size:12px}
+</style><style>
+/* Mi Día 0.2: minimal dark-blue visual system */
+:root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#090d14;color:#edf3fc}
+body{background:#090d14}
+main{max-width:610px;padding:28px 17px 85px}
+header{padding:8px 3px 3px}
+h1{font-size:27px;letter-spacing:-.9px;font-weight:720}
+h2{font-size:19px;letter-spacing:-.45px;margin:0 0 10px}
+h3{font-size:16px}
+small,.muted{color:#8b9bb2}
+nav{background:#121a27;border:1px solid #253246;padding:5px;border-radius:17px;gap:4px;margin:24px 0 18px}
+nav button{background:transparent;border-radius:12px;color:#9cacc2;font-size:14px;font-weight:600;padding:12px 6px;transition:background .15s}
+nav button.active{background:#233d63;color:#eaf3ff}
+section{background:#111925;border:1px solid #263347;border-radius:20px;padding:20px;margin:13px 0;box-shadow:0 8px 28px #00000012}
+button{border-radius:12px;background:#26364d;color:#e7f0fc;font-size:14px;font-weight:600;padding:11px 14px}
+button.primary,.primary{background:#2563eb;color:#fff}
+button:active{transform:scale(.99)}
+input,select{background:#0b1320;border:1px solid #30405a;color:#edf3fc;border-radius:12px;padding:13px;outline:none}
+input:focus,select:focus{border-color:#3b82f6;box-shadow:0 0 0 2px #3b82f622}
+input[type="checkbox"]{accent-color:#3b82f6;box-shadow:none}
+label{color:#9aabc1}
+.task{border-bottom:1px solid #253348;gap:13px;padding:15px 0}
+.task:last-child,.slot:last-child{border-bottom:0}
+.task strong{font-size:14px;font-weight:600}
+.tag{color:#93a5bf;font-size:12px;line-height:1.8}
+.pill{background:#1b3556;color:#90c2ff;border-radius:10px;padding:6px 10px}
+.slot{border-bottom:1px solid #263448;padding:15px 0}
+.slot strong{font-size:14px;font-weight:600}
+.warning{color:#ffcf92}
+footer{color:#71849d}
 </style></head><body><main><header><h1>Mi Día</h1><small>Tu tiempo, bien utilizado.</small></header><nav><button data-view="today">Hoy</button><button class="active" data-view="tomorrow">Mañana</button><button data-view="schedule">Horario</button></nav><div id="content"></div><footer>Privado · Guardado en este dispositivo · v0.1</footer></main>
 <script>
 const DAYS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
