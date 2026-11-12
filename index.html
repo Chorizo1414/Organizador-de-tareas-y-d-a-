@@ -54,13 +54,22 @@ input:not([type=checkbox]),select{width:100%;background:#0c1422;border:1px solid
 label{display:block;margin:12px 0 7px;font-size:13px;color:#9daec4}.full{width:100%;margin-top:15px}.slot{padding:14px 0;border-bottom:1px solid #28374c}.slot strong{display:block;font-size:14px;margin-bottom:6px}.slot .tag{display:inline-block;margin-right:8px}.pill{display:inline-block;background:#193554;color:#9bc8ff;padding:6px 9px;border-radius:10px;font-size:12px}
 .warning{color:#ffcc91;font-size:13px}.notice{padding:12px 18px}.empty{font-size:14px;padding:20px 0}footer{text-align:center;color:#71849d;font-size:12px;margin-top:27px}
 @media(max-width:380px){main{padding-left:12px;padding-right:12px}.task-card{padding:17px 14px}.task{gap:9px}.task-right{gap:3px}.task-time{font-size:11px}}
+</style><style>
+.weekday{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:20px 0 15px}
+.weekday button{min-width:0;padding:11px 0;border-radius:10px;font-size:12px;background:#1b2a3f;color:#9eb0c9}
+.weekday button.selected{background:#2563eb;color:#fff}
+.schedule-item{display:flex;align-items:center;gap:12px;border-bottom:1px solid #26354b;padding:16px 0}
+.schedule-time{font-size:12px;color:#75adf7;min-width:92px;font-variant-numeric:tabular-nums}
+.schedule-details{flex:1;min-width:0}.schedule-details strong{display:block;font-size:14px;overflow-wrap:anywhere}
+.edit-btn{background:#203149;color:#b4c7e1;padding:10px 13px}.schedule-card>.muted{font-size:12px;line-height:1.5}
+.action-row{margin-top:12px}.danger{background:#48252e;color:#ffc0c6}
 </style></head><body><main><header><div class="brand-icon">▣</div><div><h1>Mi Día</h1><small>Organiza menos. Haz más.</small></div></header><nav><button data-view="today">Hoy</button><button class="active" data-view="tomorrow">Mañana</button><button data-view="schedule">Horario</button></nav><div id="content"></div><footer>Privado · Guardado en este dispositivo · v0.1</footer></main>
 <script>
 const DAYS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const base=[['07:00','09:00','Música','plan'],['09:00','10:00','Desayuno','busy'],['10:00','11:00','Hogar','plan'],['12:00','13:00','Almuerzo','busy'],['13:00','14:00','Entrenamiento','busy'],['17:00','18:00','Descanso / carro','busy'],['19:00','20:00','Cena','busy']];
 const defaultData={profile:'Vacaciones',blocks:Object.fromEntries([1,2,3,4,5].map(d=>[d,base.map(x=>[...x])])),tasks:[]};
 let data;try{data=JSON.parse(localStorage.getItem('mi-dia-v1'))||defaultData}catch{data=defaultData}
-data.blocks||=defaultData.blocks;data.tasks||=[];data.profile||='Vacaciones';
+data.blocks||=defaultData.blocks;data.tasks||=[];data.profile||='Vacaciones';data.profiles||={[data.profile]:structuredClone(data.blocks)};if(!data.profiles[data.profile])data.profiles[data.profile]=structuredClone(data.blocks);data.blocks=data.profiles[data.profile];
 let view='tomorrow',day=(new Date().getDay()+1)%7;
 const save=()=>localStorage.setItem('mi-dia-v1',JSON.stringify(data));
 const el=document.getElementById('content');
@@ -86,11 +95,28 @@ el.querySelectorAll('[data-check]').forEach(x=>x.onchange=()=>{data.tasks.find(t
 el.querySelectorAll('[data-del]').forEach(x=>x.onclick=()=>{data.tasks=data.tasks.filter(t=>t.id!==x.dataset.del);save();render()});
 }
 function allocate(tasks,blocks){let slots=blocks.map(b=>({start:minutes(b[0]),end:minutes(b[1]),cat:b[2]}));const result=new Map();for(const t of tasks){const slot=slots.find(s=>s.cat===t.cat&&s.end-s.start>=t.duration);if(slot){const f=n=>String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');result.set(t.id,f(slot.start)+'–'+f(slot.start+t.duration));slot.start+=t.duration}}return result}
-function schedule(){const blocks=data.blocks[day]||[];el.innerHTML='<section><div class="row"><h2>Horario semanal</h2><span class="pill">'+escapeHtml(data.profile)+'</span></div><label>Día</label><select id="day">'+DAYS.map((d,i)=>'<option value="'+i+'" '+(i===day?'selected':'')+'>'+d+'</option>').join('')+'</select><p class="muted">Bloques planificables reciben tareas. Bloques ocupados reservan tiempo.</p>'+blocks.map((b,i)=>'<div class="slot"><strong>'+escapeHtml(b[0])+'–'+escapeHtml(b[1])+' · '+escapeHtml(b[2])+'</strong><span class="tag">'+(b[3]==='plan'?'Planificable':'Ocupado')+'</span> <button data-remove="'+i+'">Eliminar</button></div>').join('')+'<form id="addBlock"><label>Actividad</label><input id="label" required placeholder="Ej. Música" maxlength="80"><div class="row"><div><label>Inicio</label><input type="time" id="start" value="15:00" required></div><div><label>Fin</label><input type="time" id="end" value="16:00" required></div></div><label>Tipo</label><select id="type"><option value="plan">Planificable</option><option value="busy">Ocupado</option></select><button class="primary full">Agregar bloque</button></form></section><section><h3>Respaldo</h3><button id="export">Exportar mis datos</button> <label>Importar respaldo JSON<input type="file" id="import" accept=".json,application/json"></label></section>';
-document.getElementById('day').onchange=e=>{day=Number(e.target.value);render()};
-el.querySelectorAll('[data-remove]').forEach(x=>x.onclick=()=>{data.blocks[day].splice(Number(x.dataset.remove),1);save();render()});
-document.getElementById('addBlock').onsubmit=e=>{e.preventDefault();const a=document.getElementById('start').value,b=document.getElementById('end').value;if(a>=b){alert('La hora final debe ser posterior a la inicial.');return}if(blocks.some(x=>a<x[1]&&b>x[0])){alert('Este bloque se cruza con otro.');return}data.blocks[day]||=[];data.blocks[day].push([a,b,document.getElementById('label').value.trim(),document.getElementById('type').value]);data.blocks[day].sort((x,y)=>x[0].localeCompare(y[0]));save();render()};
+let editingBlock=-1;
+function schedule(){
+const blocks=data.blocks[day]||[];
+el.innerHTML='<section class="schedule-card"><div class="card-heading"><h2>Mi horario</h2><span class="pill">'+escapeHtml(data.profile)+'</span></div><label>Perfil de horario</label><div class="row"><div><select id="profile">'+Object.keys(data.profiles).map(p=>'<option '+(p===data.profile?'selected':'')+'>'+escapeHtml(p)+'</option>').join('')+'</select></div><button id="newProfile" title="Crear perfil">＋</button></div><div class="weekday">'+DAYS.map((d,i)=>'<button class="'+(i===day?'selected':'')+'" data-day="'+i+'">'+d.slice(0,2)+'</button>').join('')+'</div><p class="muted">Selecciona un bloque para editarlo. Los espacios ocupados nunca reciben tareas.</p>'+
+blocks.map((b,i)=>'<div class="schedule-item"><div class="schedule-time">'+escapeHtml(b[0])+'–'+escapeHtml(b[1])+'</div><div class="schedule-details"><strong>'+escapeHtml(b[2])+'</strong><span class="tag">'+(b[3]==='plan'?'Planificable':'Ocupado')+'</span></div><button class="edit-btn" data-edit="'+i+'" aria-label="Editar bloque">✎</button></div>').join('')+
+'<button class="full" id="newBlock">＋ Añadir bloque</button></section>'+
+'<section id="editor" class="'+(editingBlock===-2||editingBlock>=0?'':'hidden')+'"><h2>'+(editingBlock>=0?'Editar bloque':'Nuevo bloque')+'</h2><form id="blockForm"><label>Actividad</label><input id="blockLabel" required maxlength="80" placeholder="Ej. Música"><div class="row"><div><label>Inicio</label><input type="time" id="blockStart" required></div><div><label>Fin</label><input type="time" id="blockEnd" required></div></div><label>Tipo de bloque</label><select id="blockType"><option value="plan">Planificable</option><option value="busy">Ocupado</option></select><button class="primary full">Guardar cambios</button></form><div class="row action-row"><button id="cancelEdit">Cancelar</button>'+(editingBlock>=0?'<button id="removeBlock" class="danger">Eliminar bloque</button>':'')+'</div></section>'+
+'<section><h3>Mis datos</h3><p class="muted">Tus horarios y tareas se guardan en este dispositivo.</p><button id="export">Exportar respaldo</button><label>Importar respaldo JSON<input type="file" id="import" accept=".json,application/json"></label></section>';
+document.getElementById('profile').onchange=e=>{data.profile=e.target.value;data.blocks=data.profiles[data.profile];editingBlock=-1;save();render()};
+document.getElementById('newProfile').onclick=()=>{const name=prompt('Nombre del nuevo perfil de horario:');if(!name||!name.trim())return;const key=name.trim().slice(0,40);if(data.profiles[key]){alert('Ya existe ese perfil.');return}data.profiles[key]=structuredClone(data.blocks);data.profile=key;data.blocks=data.profiles[key];editingBlock=-1;save();render()};
+el.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{day=Number(b.dataset.day);editingBlock=-1;render()});
+el.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{editingBlock=Number(b.dataset.edit);render();document.getElementById('editor').scrollIntoView({block:'nearest'})});
+document.getElementById('newBlock').onclick=()=>{editingBlock=-2;render();document.getElementById('editor').scrollIntoView({block:'nearest'})};
+if(editingBlock>=0||editingBlock===-2){
+const b=editingBlock>=0?blocks[editingBlock]:['15:00','16:00','','plan'];
+document.getElementById('blockLabel').value=b[2];document.getElementById('blockStart').value=b[0];document.getElementById('blockEnd').value=b[1];document.getElementById('blockType').value=b[3];
+document.getElementById('cancelEdit').onclick=()=>{editingBlock=-1;render()};
+if(editingBlock>=0)document.getElementById('removeBlock').onclick=()=>{if(confirm('¿Eliminar este bloque?')){blocks.splice(editingBlock,1);editingBlock=-1;save();render()}};
+document.getElementById('blockForm').onsubmit=e=>{e.preventDefault();const a=document.getElementById('blockStart').value,z=document.getElementById('blockEnd').value,name=document.getElementById('blockLabel').value.trim(),type=document.getElementById('blockType').value;if(!name||a>=z){alert('Revisa el nombre y las horas.');return}if(blocks.some((b,i)=>i!==editingBlock&&a<b[1]&&z>b[0])){alert('El bloque se cruza con otro.');return}if(!data.blocks[day])data.blocks[day]=[];if(editingBlock>=0)blocks.splice(editingBlock,1);data.blocks[day].push([a,z,name,type]);data.blocks[day].sort((x,y)=>x[0].localeCompare(y[0]));editingBlock=-1;save();render()};
+}
 document.getElementById('export').onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mi-dia-respaldo.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
-document.getElementById('import').onchange=async e=>{try{const obj=JSON.parse(await e.target.files[0].text());if(!obj||!Array.isArray(obj.tasks)||typeof obj.blocks!=='object')throw Error();if(confirm('¿Reemplazar los datos actuales por el respaldo?')){data=obj;save();render()}}catch{alert('Archivo de respaldo inválido')}}}
+document.getElementById('import').onchange=async e=>{try{const obj=JSON.parse(await e.target.files[0].text());if(!obj||!Array.isArray(obj.tasks)||!obj.blocks||typeof obj.blocks!=='object')throw Error();if(confirm('¿Reemplazar los datos actuales por el respaldo?')){data=obj;data.profile||='Vacaciones';data.profiles||={[data.profile]:structuredClone(data.blocks)};data.blocks=data.profiles[data.profile]||data.blocks;save();editingBlock=-1;render()}}catch{alert('Archivo de respaldo inválido')}};
+}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{view=b.dataset.view;render()});render();
 </script></body></html>
