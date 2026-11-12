@@ -63,13 +63,13 @@ label{display:block;margin:12px 0 7px;font-size:13px;color:#9daec4}.full{width:1
 .schedule-details{flex:1;min-width:0}.schedule-details strong{display:block;font-size:14px;overflow-wrap:anywhere}
 .edit-btn{background:#203149;color:#b4c7e1;padding:10px 13px}.schedule-card>.muted{font-size:12px;line-height:1.5}
 .action-row{margin-top:12px}.danger{background:#48252e;color:#ffc0c6}
-</style><style>.overflow-row{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:12px 0;border-top:1px solid #28384e}.overflow-row span{font-size:13px;overflow-wrap:anywhere;min-width:0}.overflow-row button{font-size:12px;flex-shrink:0}.notice h3{margin:4px 0 8px}</style><style>.task-right{gap:2px}.task-action{background:transparent;color:#8fb8f1;padding:7px 5px;font-size:17px}.timer-panel{border-color:#29548c}.timer-panel strong{color:#60a5fa}.timer-panel p{font-size:13px}.task-time{font-size:11px}@media(max-width:390px){.task{align-items:flex-start}.task-right{flex-wrap:wrap;max-width:94px;justify-content:flex-end}.task-time{width:100%;text-align:right}}</style></head><body><main><header><div class="brand-icon">▣</div><div><h1>Mi Día</h1><small>Organiza menos. Haz más.</small></div></header><nav><button data-view="today">Hoy</button><button class="active" data-view="tomorrow">Mañana</button><button data-view="schedule">Horario</button></nav><div id="content"></div><footer>Privado · Guardado en este dispositivo · v0.7</footer></main>
+</style><style>.overflow-row{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:12px 0;border-top:1px solid #28384e}.overflow-row span{font-size:13px;overflow-wrap:anywhere;min-width:0}.overflow-row button{font-size:12px;flex-shrink:0}.notice h3{margin:4px 0 8px}</style><style>.task-right{gap:2px}.task-action{background:transparent;color:#8fb8f1;padding:7px 5px;font-size:17px}.timer-panel{border-color:#29548c}.timer-panel strong{color:#60a5fa}.timer-panel p{font-size:13px}.task-time{font-size:11px}@media(max-width:390px){.task{align-items:flex-start}.task-right{flex-wrap:wrap;max-width:94px;justify-content:flex-end}.task-time{width:100%;text-align:right}}</style><style>.reminder-toggle{display:flex;align-items:center;gap:12px}.reminder-toggle input{width:20px;height:20px;accent-color:#2563eb}#reminderBanner{position:fixed;bottom:20px;left:12px;right:12px;max-width:580px;margin:auto;background:#1c3c68;border:1px solid #60a5fa;border-radius:15px;padding:16px;color:white;z-index:999;box-shadow:0 8px 30px #0009;font-size:14px}.task-action{background:transparent;color:#8dbbfa;padding:6px}</style></head><body><main><header><div class="brand-icon">▣</div><div><h1>Mi Día</h1><small>Organiza menos. Haz más.</small></div></header><nav><button data-view="today">Hoy</button><button class="active" data-view="tomorrow">Mañana</button><button data-view="schedule">Horario</button></nav><div id="content"></div><footer>Privado · Guardado en este dispositivo · v0.8</footer></main>
 <script>
 const DAYS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const base=[['07:00','09:00','Música','plan'],['09:00','10:00','Desayuno','busy'],['10:00','11:00','Hogar','plan'],['12:00','13:00','Almuerzo','busy'],['13:00','14:00','Entrenamiento','busy'],['17:00','18:00','Descanso / carro','busy'],['19:00','20:00','Cena','busy']];
 const defaultData={profile:'Vacaciones',blocks:Object.fromEntries([1,2,3,4,5].map(d=>[d,base.map(x=>[...x])])),tasks:[]};
 let data;try{data=JSON.parse(localStorage.getItem('mi-dia-v1'))||defaultData}catch{data=defaultData}
-data.blocks||=defaultData.blocks;data.tasks||=[];data.profile||='Vacaciones';data.profiles||={[data.profile]:structuredClone(data.blocks)};if(!data.profiles[data.profile])data.profiles[data.profile]=structuredClone(data.blocks);data.blocks=data.profiles[data.profile];data.history||=[];data.approvedSlots||={};data.timer||=null;
+data.blocks||=defaultData.blocks;data.tasks||=[];data.profile||='Vacaciones';data.profiles||={[data.profile]:structuredClone(data.blocks)};if(!data.profiles[data.profile])data.profiles[data.profile]=structuredClone(data.blocks);data.blocks=data.profiles[data.profile];data.history||=[];data.approvedSlots||={};data.timer||=null;data.reminders||={enabled:false,lead:10,planning:'20:30',repeat:30};data.reminderLog||={};
 let view='tomorrow',day=(new Date().getDay()+1)%7;
 const save=()=>localStorage.setItem('mi-dia-v1',JSON.stringify(data));
 const el=document.getElementById('content');
@@ -129,7 +129,16 @@ el.innerHTML='<section class="schedule-card"><div class="card-heading"><h2>Mi ho
 blocks.map((b,i)=>'<div class="schedule-item"><div class="schedule-time">'+escapeHtml(b[0])+'–'+escapeHtml(b[1])+'</div><div class="schedule-details"><strong>'+escapeHtml(b[2])+'</strong><span class="tag">'+(b[3]==='plan'?'Planificable':'Ocupado')+'</span></div><button class="edit-btn" data-edit="'+i+'" aria-label="Editar bloque">✎</button></div>').join('')+
 '<button class="full" id="newBlock">＋ Añadir bloque</button></section>'+
 '<section id="editor" class="'+(editingBlock===-2||editingBlock>=0?'':'hidden')+'"><h2>'+(editingBlock>=0?'Editar bloque':'Nuevo bloque')+'</h2><form id="blockForm"><label>Actividad</label><input id="blockLabel" required maxlength="80" placeholder="Ej. Música"><div class="row"><div><label>Inicio</label><input type="time" id="blockStart" required></div><div><label>Fin</label><input type="time" id="blockEnd" required></div></div><label>Tipo de bloque</label><select id="blockType"><option value="plan">Planificable</option><option value="busy">Ocupado</option></select><button class="primary full">Guardar cambios</button></form><div class="row action-row"><button id="cancelEdit">Cancelar</button>'+(editingBlock>=0?'<button id="removeBlock" class="danger">Eliminar bloque</button>':'')+'</div></section>'+
-'<section><h3>Mis datos</h3><p class="muted">Tus horarios y tareas se guardan en este dispositivo.</p><button id="export">Exportar respaldo</button><label>Importar respaldo JSON<input type="file" id="import" accept=".json,application/json"></label></section>';
+'<section><h3>Recordatorios</h3><p class="muted">Los avisos funcionan mientras Mi Día esté abierta. Android puede suspenderlos al cerrar la aplicación.</p><label class="reminder-toggle"><input type="checkbox" id="remEnabled" '+(data.reminders.enabled?'checked':'')+'> Activar recordatorios</label><div class="row"><div><label>Avisar antes de cada tarea</label><select id="remLead"><option value="0">Al comenzar</option><option value="5">5 minutos</option><option value="10">10 minutos</option><option value="15">15 minutos</option><option value="30">30 minutos</option></select></div><div><label>Repetir si está pendiente</label><select id="remRepeat"><option value="0">No repetir</option><option value="15">Cada 15 min</option><option value="30">Cada 30 min</option><option value="60">Cada 60 min</option></select></div></div><label>Recordarme preparar mañana</label><input type="time" id="remPlanning" value="'+escapeHtml(data.reminders.planning)+'"><button id="requestNotices" class="full">Permitir notificaciones del dispositivo</button><p id="noticeStatus" class="muted"></p></section>'+'<section><h3>Mis datos</h3><p class="muted">Tus horarios y tareas se guardan en este dispositivo.</p><button id="export">Exportar respaldo</button><label>Importar respaldo JSON<input type="file" id="import" accept=".json,application/json"></label></section>';
+document.getElementById('remLead').value=String(data.reminders.lead);
+document.getElementById('remRepeat').value=String(data.reminders.repeat);
+document.getElementById('remEnabled').onchange=e=>{data.reminders.enabled=e.target.checked;save();checkReminders()};
+document.getElementById('remLead').onchange=e=>{data.reminders.lead=Number(e.target.value);save()};
+document.getElementById('remRepeat').onchange=e=>{data.reminders.repeat=Number(e.target.value);save()};
+document.getElementById('remPlanning').onchange=e=>{data.reminders.planning=e.target.value;save()};
+const status=document.getElementById('noticeStatus');
+status.textContent=('Notification' in window)?'Permiso actual: '+Notification.permission:'Tu navegador no admite notificaciones del sistema; se mostrarán avisos dentro de Mi Día.';
+document.getElementById('requestNotices').onclick=async()=>{if(!('Notification' in window)){alert('No disponible en este navegador.');return}try{const p=await Notification.requestPermission();status.textContent='Permiso actual: '+p}catch{status.textContent='No fue posible solicitar permiso.'}};
 document.getElementById('profile').onchange=e=>{data.profile=e.target.value;data.blocks=data.profiles[data.profile];editingBlock=-1;save();render()};
 document.getElementById('newProfile').onclick=()=>{const name=prompt('Nombre del nuevo perfil de horario:');if(!name||!name.trim())return;const key=name.trim().slice(0,40);if(data.profiles[key]){alert('Ya existe ese perfil.');return}data.profiles[key]=structuredClone(data.blocks);data.profile=key;data.blocks=data.profiles[key];editingBlock=-1;save();render()};
 el.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{day=Number(b.dataset.day);editingBlock=-1;render()});
@@ -145,6 +154,28 @@ document.getElementById('blockForm').onsubmit=e=>{e.preventDefault();const a=doc
 document.getElementById('export').onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mi-dia-respaldo.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
 document.getElementById('import').onchange=async e=>{try{const obj=JSON.parse(await e.target.files[0].text());if(!obj||!Array.isArray(obj.tasks)||!obj.blocks||typeof obj.blocks!=='object')throw Error();if(confirm('¿Reemplazar los datos actuales por el respaldo?')){data=obj;data.profile||='Vacaciones';data.profiles||={[data.profile]:structuredClone(data.blocks)};data.blocks=data.profiles[data.profile]||data.blocks;data.history||=[];data.approvedSlots||={};data.timer||=null;save();editingBlock=-1;render()}}catch{alert('Archivo de respaldo inválido')}};
 }
-document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{view=b.dataset.view;render()});render();
+function checkReminders(){
+if(!data.reminders.enabled)return;
+const now=new Date(),today=iso(),mins=now.getHours()*60+now.getMinutes(),lead=Number(data.reminders.lead)||0,repeat=Number(data.reminders.repeat)||0;
+const planTime=minutes(data.reminders.planning||'20:30'),planKey=today+'|plan';
+if(mins>=planTime&&mins<planTime+2&&!data.reminderLog[planKey])sendReminder(planKey,'Prepara tu día de mañana','Revisa o agrega las tareas para mañana.');
+const blocks=(data.blocks[now.getDay()]||[]).filter(b=>b[3]==='plan');
+const plan=allocate(data.tasks.filter(t=>t.date===today),blocks,today);
+for(const t of data.tasks.filter(t=>t.date===today&&!t.done)){
+const slot=plan.get(t.id);if(!slot)continue;const start=minutes(slot.split('–')[0]);const delta=mins-(start-lead);if(delta<0)continue;
+const step=repeat>0?Math.floor(delta/repeat):0;
+if(!repeat&&delta>2)continue;
+if(repeat&&delta>Math.max(0,Number(t.duration))+120)continue;
+const key=today+'|'+t.id+'|'+step;if(!data.reminderLog[key])sendReminder(key,'Tarea pendiente: '+t.name,'Horario previsto: '+slot);
+}
+}
+function sendReminder(key,title,body){
+data.reminderLog[key]=Date.now();
+const keys=Object.keys(data.reminderLog);if(keys.length>500){for(const k of keys.slice(0,keys.length-300))delete data.reminderLog[k]}save();
+if('Notification' in window&&Notification.permission==='granted'){try{new Notification(title,{body,icon:'./icon.svg',tag:key});return}catch{}}
+let banner=document.getElementById('reminderBanner');if(!banner){banner=document.createElement('div');banner.id='reminderBanner';banner.setAttribute('role','status');document.body.appendChild(banner)}
+banner.textContent=title+' — '+body;banner.onclick=()=>banner.remove();
+}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{view=b.dataset.view;render()});render();checkReminders();setInterval(checkReminders,30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkReminders()});
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Sin modo offline:',err)))}
 </script></body></html>
