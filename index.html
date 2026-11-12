@@ -63,7 +63,7 @@ label{display:block;margin:12px 0 7px;font-size:13px;color:#9daec4}.full{width:1
 .schedule-details{flex:1;min-width:0}.schedule-details strong{display:block;font-size:14px;overflow-wrap:anywhere}
 .edit-btn{background:#203149;color:#b4c7e1;padding:10px 13px}.schedule-card>.muted{font-size:12px;line-height:1.5}
 .action-row{margin-top:12px}.danger{background:#48252e;color:#ffc0c6}
-</style></head><body><main><header><div class="brand-icon">▣</div><div><h1>Mi Día</h1><small>Organiza menos. Haz más.</small></div></header><nav><button data-view="today">Hoy</button><button class="active" data-view="tomorrow">Mañana</button><button data-view="schedule">Horario</button></nav><div id="content"></div><footer>Privado · Guardado en este dispositivo · v0.1</footer></main>
+</style><style>.overflow-row{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:12px 0;border-top:1px solid #28384e}.overflow-row span{font-size:13px;overflow-wrap:anywhere;min-width:0}.overflow-row button{font-size:12px;flex-shrink:0}.notice h3{margin:4px 0 8px}</style></head><body><main><header><div class="brand-icon">▣</div><div><h1>Mi Día</h1><small>Organiza menos. Haz más.</small></div></header><nav><button data-view="today">Hoy</button><button class="active" data-view="tomorrow">Mañana</button><button data-view="schedule">Horario</button></nav><div id="content"></div><footer>Privado · Guardado en este dispositivo · v0.1</footer></main>
 <script>
 const DAYS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const base=[['07:00','09:00','Música','plan'],['09:00','10:00','Desayuno','busy'],['10:00','11:00','Hogar','plan'],['12:00','13:00','Almuerzo','busy'],['13:00','14:00','Entrenamiento','busy'],['17:00','18:00','Descanso / carro','busy'],['19:00','20:00','Cena','busy']];
@@ -80,21 +80,37 @@ function render(){document.querySelectorAll('nav button').forEach(b=>b.classList
 function tasks(date){
 const selected=data.tasks.filter(t=>t.date===date),dayIndex=new Date(date+'T12:00:00').getDay();
 const blocks=(data.blocks[dayIndex]||[]).filter(b=>b[3]==='plan');
-const plan=allocate(selected,blocks),pending=selected.filter(t=>!t.done);
+const plan=allocate(selected,blocks,date),pending=selected.filter(t=>!t.done);
 const total=pending.reduce((sum,t)=>sum+t.duration,0);
 const pct=selected.length?Math.round((selected.length-pending.length)/selected.length*100):0;
 el.innerHTML='<div class="summary"><div class="eyebrow">'+(view==='today'?'TU PLAN DE HOY':'TU PLAN DE MAÑANA')+'</div><h2>Un día a la vez.</h2><div class="summary-stats"><span>'+pending.length+' tareas pendientes</span><b>'+Math.floor(total/60)+' h '+String(total%60).padStart(2,'0')+' min</b></div><div class="progress"><div style="width:'+pct+'%"></div></div></div>'+
 '<section class="task-card"><div class="card-heading"><h2>Tus tareas</h2><span class="date-label">'+date+'</span></div>'+
-(selected.length?selected.map(t=>{const slot=plan.get(t.id);return '<div class="task '+(t.done?'done':'')+'"><input type="checkbox" aria-label="Completar tarea" data-check="'+t.id+'" '+(t.done?'checked':'')+'><div class="task-copy"><strong>'+escapeHtml(t.name)+'</strong><div class="tag">'+escapeHtml(t.cat)+' · '+t.duration+' min</div></div><div class="task-right"><span class="task-time">'+(slot?escapeHtml(slot.split('–')[0]):'Pendiente')+'</span><button class="delete" data-del="'+t.id+'" aria-label="Eliminar tarea">×</button></div></div>'}).join(''):'<p class="muted empty">Todavía no hay tareas. Añade la primera para empezar.</p>')+'</section>'+
+(selected.length?[...selected].sort((a,b)=>{const x=plan.get(a.id),y=plan.get(b.id);return (x?0:1)-(y?0:1)||(x&&y?x.localeCompare(y):0)||priorityScore(b,date)-priorityScore(a,date)}).map(t=>{const slot=plan.get(t.id);return '<div class="task '+(t.done?'done':'')+'"><input type="checkbox" aria-label="Completar tarea" data-check="'+t.id+'" '+(t.done?'checked':'')+'><div class="task-copy"><strong>'+escapeHtml(t.name)+'</strong><div class="tag">'+escapeHtml(t.cat)+' · '+t.duration+' min'+(t.priority===3?' · Alta prioridad':'')+(t.deadline?' · Límite '+escapeHtml(t.deadline):'')+'</div></div><div class="task-right"><span class="task-time">'+(slot?escapeHtml(slot.split('–')[0]):'Pendiente')+'</span><button class="delete" data-del="'+t.id+'" aria-label="Eliminar tarea">×</button></div></div>'}).join(''):'<p class="muted empty">Todavía no hay tareas. Añade la primera para empezar.</p>')+'</section>'+
 '<button id="toggleAdd" class="primary add-trigger">＋ Nueva tarea</button>'+
-'<section id="addPanel" class="add-panel hidden"><h2>Nueva tarea</h2><form id="add"><label>¿Qué necesitas hacer?</label><input id="name" placeholder="Escribe una tarea..." maxlength="140" required><div class="row"><div><label>Categoría</label><select id="cat"><option>Música</option><option>Hogar</option><option>Personal</option></select></div><div><label>Duración (min)</label><input id="duration" type="number" min="5" max="480" step="5" value="30" required></div></div><button class="primary full">Guardar tarea</button></form></section>'+
-(selected.some(t=>!plan.has(t.id))?'<section class="notice"><p class="warning">Algunas tareas no caben en los bloques disponibles. Tu horario se mantiene intacto.</p></section>':'');
+'<section id="addPanel" class="add-panel hidden"><h2>Nueva tarea</h2><form id="add"><label>¿Qué necesitas hacer?</label><input id="name" placeholder="Escribe una tarea..." maxlength="140" required><div class="row"><div><label>Categoría</label><select id="cat"><option>Música</option><option>Hogar</option><option>Personal</option></select></div><div><label>Duración (min)</label><input id="duration" type="number" min="5" max="480" step="5" value="30" required></div></div><div class="row"><div><label>Prioridad</label><select id="priority"><option value="2">Normal</option><option value="3">Alta</option><option value="1">Baja</option></select></div><div><label>Fecha límite (opcional)</label><input type="date" id="deadline"></div></div><button class="primary full">Guardar tarea</button></form></section>'+
+(selected.some(t=>!plan.has(t.id))?'<section class="notice"><h3>Necesitan más tiempo</h3><p class="warning">Estas tareas no caben en los bloques actuales. Puedes pasarlas a mañana siguiente sin cambiar tu horario.</p>'+selected.filter(t=>!t.done&&!plan.has(t.id)).map(t=>'<div class="overflow-row"><span>'+escapeHtml(t.name)+'</span><button data-postpone="'+t.id+'">Pasar al día siguiente</button></div>').join('')+'</section>':'');
 document.getElementById('toggleAdd').onclick=()=>{const p=document.getElementById('addPanel');p.classList.toggle('hidden');if(!p.classList.contains('hidden'))document.getElementById('name').focus()};
-document.getElementById('add').onsubmit=e=>{e.preventDefault();const name=document.getElementById('name').value.trim();if(!name)return;data.tasks.push({id:crypto.randomUUID(),date,name,cat:document.getElementById('cat').value,duration:Number(document.getElementById('duration').value),done:false});save();render()};
+document.getElementById('add').onsubmit=e=>{e.preventDefault();const name=document.getElementById('name').value.trim();if(!name)return;data.tasks.push({id:crypto.randomUUID(),date,name,cat:document.getElementById('cat').value,duration:Number(document.getElementById('duration').value),priority:Number(document.getElementById('priority').value),deadline:document.getElementById('deadline').value,done:false});save();render()};
 el.querySelectorAll('[data-check]').forEach(x=>x.onchange=()=>{data.tasks.find(t=>t.id===x.dataset.check).done=x.checked;save();render()});
 el.querySelectorAll('[data-del]').forEach(x=>x.onclick=()=>{data.tasks=data.tasks.filter(t=>t.id!==x.dataset.del);save();render()});
+el.querySelectorAll('[data-postpone]').forEach(x=>x.onclick=()=>{const t=data.tasks.find(t=>t.id===x.dataset.postpone);if(!t)return;const d=new Date(t.date+'T12:00:00');d.setDate(d.getDate()+1);t.date=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');save();render()});
 }
-function allocate(tasks,blocks){let slots=blocks.map(b=>({start:minutes(b[0]),end:minutes(b[1]),cat:b[2]}));const result=new Map();for(const t of tasks){const slot=slots.find(s=>s.cat===t.cat&&s.end-s.start>=t.duration);if(slot){const f=n=>String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');result.set(t.id,f(slot.start)+'–'+f(slot.start+t.duration));slot.start+=t.duration}}return result}
+function priorityScore(t,date){
+const p=Number(t.priority)||2;let score=p*100;
+if(t.deadline){const days=Math.round((new Date(t.deadline+'T12:00:00')-new Date(date+'T12:00:00'))/86400000);score+=days<=0?250:Math.max(0,100-days*20)}
+return score;
+}
+function allocate(tasks,blocks,date){
+const slots=blocks.map(b=>({start:minutes(b[0]),end:minutes(b[1]),cat:b[2]})).sort((a,b)=>a.start-b.start);
+const result=new Map();
+const ordered=[...tasks].filter(t=>!t.done).sort((a,b)=>priorityScore(b,date)-priorityScore(a,date));
+for(const t of ordered){
+const duration=Number(t.duration);if(!Number.isFinite(duration)||duration<=0)continue;
+const slot=slots.find(s=>s.cat===t.cat&&s.end-s.start>=duration);
+if(slot){const fmt=n=>String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');result.set(t.id,fmt(slot.start)+'–'+fmt(slot.start+duration));slot.start+=duration}
+}
+return result;
+}
 let editingBlock=-1;
 function schedule(){
 const blocks=data.blocks[day]||[];
