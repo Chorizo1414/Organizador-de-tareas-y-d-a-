@@ -71,7 +71,7 @@ label{display:block;margin:12px 0 7px;font-size:13px;color:#9daec4}.full{width:1
 .task-copy{min-width:0}.task-copy strong{overflow-wrap:anywhere}
 @media(min-width:850px){main{max-width:760px;padding-top:36px}.task-card{padding:26px 28px}.task-right{max-width:none;flex-wrap:nowrap}.task-time{width:auto}}
 @media(max-width:430px){.task{gap:9px}.task-right{max-width:104px}.task-time{width:100%;text-align:right}.task-action{padding:5px}.delete{padding:5px}.row{gap:8px}}
-</style></head><body><main><header><div class="brand-icon">▣</div><div><h1>Mi Día</h1><small>Organiza menos. Haz más.</small></div></header><nav><button data-view="today">Hoy</button><button class="active" data-view="tomorrow">Mañana</button><button data-view="schedule">Horario</button></nav><div id="content"></div><footer>Privado · Guardado en este dispositivo · v1.0</footer></main>
+</style></head><body><main><header><div class="brand-icon">▣</div><div><h1>Mi Día</h1><small>Organiza menos. Haz más.</small></div></header><nav><button data-view="today">Hoy</button><button class="active" data-view="tomorrow">Mañana</button><button data-view="schedule">Horario</button></nav><div id="content"></div><footer>Privado · Guardado en este dispositivo · v1.1</footer></main>
 <script>
 const DAYS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const base=[['07:00','09:00','Música','plan'],['09:00','10:00','Desayuno','busy'],['10:00','11:00','Hogar','plan'],['12:00','13:00','Almuerzo','busy'],['13:00','14:00','Entrenamiento','busy'],['17:00','18:00','Descanso / carro','busy'],['19:00','20:00','Cena','busy']];
@@ -127,7 +127,7 @@ document.getElementById('toggleAdd').onclick=()=>{const p=document.getElementByI
 document.getElementById('name').addEventListener('input',e=>{const match=[...data.history].reverse().find(h=>h.name.trim().toLowerCase()===e.target.value.trim().toLowerCase());if(match){document.getElementById('duration').value=estimate(e.target.value);document.getElementById('cat').value=match.cat}});
 document.getElementById('add').onsubmit=e=>{e.preventDefault();const name=document.getElementById('name').value.trim();if(!name)return;data.tasks.push({id:crypto.randomUUID(),date,name,cat:document.getElementById('cat').value,duration:Number(document.getElementById('duration').value),priority:Number(document.getElementById('priority').value),deadline:document.getElementById('deadline').value,done:false});save();render()};
 el.querySelectorAll('[data-check]').forEach(x=>x.onchange=()=>{const t=data.tasks.find(t=>t.id===x.dataset.check);if(!t)return;if(x.checked&&!t.done){const answer=prompt('¿Cuántos minutos tardaste realmente? (opcional)',String(t.duration));const actual=Number(answer);if(answer!==null&&Number.isFinite(actual)&&actual>=1&&actual<=1440){t.actualDuration=actual;data.history.push({name:t.name,cat:t.cat,duration:actual,date:iso()});}}t.done=x.checked;save();render()});
-el.querySelectorAll('[data-del]').forEach(x=>x.onclick=()=>{data.tasks=data.tasks.filter(t=>t.id!==x.dataset.del);save();render()});
+el.querySelectorAll('[data-del]').forEach(x=>x.onclick=()=>{const t=data.tasks.find(t=>t.id===x.dataset.del);if(!t)return;if(!confirm('¿Eliminar la tarea «'+t.name+'»? Esta acción no se puede deshacer.'))return;data.tasks=data.tasks.filter(t=>t.id!==x.dataset.del);if(data.timer?.id===x.dataset.del)data.timer=null;save();render()});
 el.querySelectorAll('[data-postpone]').forEach(x=>x.onclick=()=>{const t=data.tasks.find(t=>t.id===x.dataset.postpone);if(!t)return;const d=new Date(t.date+'T12:00:00');d.setDate(d.getDate()+1);t.date=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');save();render()});
 }
 function overduePanel(date,items){
@@ -186,8 +186,25 @@ document.getElementById('cancelEdit').onclick=()=>{editingBlock=-1;render()};
 if(editingBlock>=0)document.getElementById('removeBlock').onclick=()=>{if(confirm('¿Eliminar este bloque?')){blocks.splice(editingBlock,1);editingBlock=-1;save();render()}};
 document.getElementById('blockForm').onsubmit=e=>{e.preventDefault();const a=document.getElementById('blockStart').value,z=document.getElementById('blockEnd').value,name=document.getElementById('blockLabel').value.trim(),type=document.getElementById('blockType').value;if(!name||a>=z){alert('Revisa el nombre y las horas.');return}if(blocks.some((b,i)=>i!==editingBlock&&a<b[1]&&z>b[0])){alert('El bloque se cruza con otro.');return}if(!data.blocks[day])data.blocks[day]=[];if(editingBlock>=0)blocks.splice(editingBlock,1);data.blocks[day].push([a,z,name,type]);data.blocks[day].sort((x,y)=>x[0].localeCompare(y[0]));editingBlock=-1;save();render()};
 }
-document.getElementById('export').onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mi-dia-respaldo.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
-document.getElementById('import').onchange=async e=>{try{const obj=JSON.parse(await e.target.files[0].text());if(!obj||!Array.isArray(obj.tasks)||!obj.blocks||typeof obj.blocks!=='object')throw Error();if(confirm('¿Reemplazar los datos actuales por el respaldo?')){data=obj;data.profile||='Vacaciones';data.profiles||={[data.profile]:structuredClone(data.blocks)};data.blocks=data.profiles[data.profile]||data.blocks;data.history||=[];data.approvedSlots||={};data.timer||=null;save();editingBlock=-1;render()}}catch{alert('Archivo de respaldo inválido')}};
+document.getElementById('export').onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mi-dia-respaldo-'+iso()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+document.getElementById('import').onchange=async e=>{
+const file=e.target.files?.[0];if(!file)return;
+try{
+if(file.size>5*1024*1024)throw Error('El archivo supera los 5 MB.');
+const obj=JSON.parse(await file.text());
+if(!obj||typeof obj!=='object'||!Array.isArray(obj.tasks)||!obj.blocks||typeof obj.blocks!=='object'||Array.isArray(obj.blocks))throw Error('El archivo no contiene un respaldo de Mi Día.');
+if(obj.tasks.length>20000||obj.tasks.some(t=>!t||typeof t!=='object'||typeof t.id!=='string'||typeof t.name!=='string'||typeof t.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(t.date)||!Number.isFinite(Number(t.duration))))throw Error('Hay tareas con datos inválidos.');
+const yes=confirm('Este respaldo contiene '+obj.tasks.length+' tareas. Importarlo REEMPLAZARÁ tus datos actuales. ¿Quieres continuar?');
+if(!yes)return;
+const previous=localStorage.getItem('mi-dia-v1');
+try{localStorage.setItem('mi-dia-respaldo-anterior',previous||'');}catch{}
+data=obj;data.profile||='Vacaciones';data.profiles||={[data.profile]:structuredClone(data.blocks)};
+data.blocks=data.profiles[data.profile]||data.blocks;data.history||=[];data.approvedSlots||={};data.timer||=null;
+data.reminders||={enabled:false,lead:10,planning:'20:30',repeat:30};data.reminderLog||={};
+save();editingBlock=-1;render();alert('Respaldo importado correctamente.');
+}catch(err){alert('No se pudo importar: '+(err.message||'archivo inválido'))}
+finally{e.target.value=''}
+};
 }
 function notificationStatus(){
 if(!('Notification' in window))return 'Notificaciones del sistema no disponibles. Se mostrarán avisos dentro de Mi Día.';
